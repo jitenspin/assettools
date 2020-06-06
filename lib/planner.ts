@@ -63,6 +63,8 @@ export type MonthAsset = {
 
 export type MonthAssetHistory = MonthAsset[];
 
+export type BankruptcyInfo = MonthAsset;
+
 const toHistory = (params: Params): MonthInfoHistory => {
   let year = params.startYear;
   let month = params.startMonth;
@@ -150,53 +152,39 @@ const checkAllCash = (
 
 const runWithMoveToRisk = (
   initialAsset: Asset,
-  expectedReturn: number,
+  expectedMonthlyReturn: number,
   history: MonthInfoHistory,
 ): MonthAssetHistory => {
   // 逆順でやっていく
   history.reverse(); // ここで破壊するけどしょうがない
   const assetHistory = [];
-  const asset = {
-    cash: 0,
-    risk: 0, // ここのリスク資産は、この月に足されるという意味になる
-  };
+  let mustCash = 0; // 月の最後にはこの額の現金が必要
   history.forEach((info) => {
-    console.log(info);
-    // 逆順なので先に push
+    // mustCash 分の現金は次月に残しておかないといけない
+    // 余るようであればリスク資産を買っていい
+    const current = {
+      cash: mustCash,
+      risk: info.income - info.expense - mustCash,
+    };
+    // リセット
+    mustCash = 0;
+    // 現金が足りなかったら前月に残す現金を増やす
+    if (current.risk < 0) {
+      mustCash = current.risk * -1;
+      current.risk = 0;
+    }
     assetHistory.push({
       monthInfo: info,
-      asset: { ...asset },
+      asset: current,
     });
-    // 前月の準備
-    asset.cash += info.expense - info.income;
-    asset.risk = 0;
-    if (asset.cash < 0) {
-      asset.risk = asset.cash * -1;
-      asset.cash = 0;
-    }
-  });
-  // 初月とすり合わせる。余ったらイニシャルのリスク資産へ
-  const ini = { ...initialAsset };
-  if (initialAsset.cash - asset.cash > 0) {
-    ini.risk += initialAsset.cash - asset.cash;
-    ini.cash = asset.cash;
-  }
-  assetHistory.push({
-    // TODO: monthInfo
-    monthInfo: {
-      year: 2020,
-      month: 4,
-      income: 0,
-      expense: 0,
-    },
-    asset: ini,
   });
   assetHistory.reverse();
   // リスク資産を総和していく
-  let risk = 0;
+  // 初月とすり合わせる。余ったらイニシャルのリスク資産へ
+  let risk = initialAsset.risk + initialAsset.cash - mustCash;
   assetHistory.forEach((ma) => {
-    risk += ma.asset.risk;
-    ma.asset.risk = risk * expectedReturn;
+    ma.asset.risk += risk * expectedMonthlyReturn;
+    risk = ma.asset.risk;
   });
   return assetHistory;
 };
@@ -204,31 +192,30 @@ const runWithMoveToRisk = (
 // 全部現金で持ちつつ一部売って確保
 const runWithSellRisk = (
   initialAsset: Asset,
-  expectedReturn: number,
+  expectedMonthlyReturn: number,
   expectedMaxDrawdown: number,
   history: MonthInfoHistory,
-): MonthAssetHistory => {
+): MonthAssetHistory | BankruptcyInfo => {
   const assetHistory = [];
   const asset = { ...initialAsset };
-  assetHistory.push({
-    // TODO: monthInfo
-    monthInfo: {
-      year: 2020,
-      month: 4,
-      income: 0,
-      expense: 0,
-    },
-    asset: asset,
-  });
+  let bankruptcyInfo = null;
   history.forEach((info) => {
-    asset.risk *= expectedReturn;
+    if (bankruptcyInfo !== null) {
+      return;
+    }
+    asset.risk *= expectedMonthlyReturn;
     asset.cash += info.income - info.expense;
     if (asset.cash < 0) {
-      // TODO: ドローダウン破産チェック
-      asset.risk += asset.cash;
-      if (asset.risk < 0) {
-        console.log('破産');
+      // ドローダウン破産チェック
+      if (asset.risk * expectedMaxDrawdown + asset.cash < 0) {
+        bankruptcyInfo = {
+          monthInfo: info,
+          asset: { ...asset },
+        };
+        return;
       }
+      asset.risk += asset.cash;
+      asset.cash = 0;
     }
     // 最後に push
     assetHistory.push({
@@ -236,26 +223,28 @@ const runWithSellRisk = (
       asset: { ...asset },
     });
   });
+  if (bankruptcyInfo !== null) {
+    return bankruptcyInfo;
+  }
   return assetHistory;
 };
 
-export const run = (params: Params) => {
+export const run = (params: Params): MonthAssetHistory | BankruptcyInfo => {
   const history = toHistory(params);
-  console.log(history);
   const allCashOk = checkAllCash(params.initialAsset, history);
-  console.log(allCashOk);
+  const expectedMonthlyReturn = params.expectedReturn ** (1 / 12);
   if (allCashOk) {
     // 余剰資金をリスク資産に
     return runWithMoveToRisk(
       params.initialAsset,
-      params.expectedReturn,
+      expectedMonthlyReturn,
       history,
     );
   } else {
     // 足りなくなったら都度リスク資産を売却していく
     return runWithSellRisk(
       params.initialAsset,
-      params.expectedReturn,
+      expectedMonthlyReturn,
       params.expectedMaxDrawdown,
       history,
     );
