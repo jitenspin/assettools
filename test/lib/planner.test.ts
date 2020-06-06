@@ -267,18 +267,20 @@ test('bankruptcy', () => {
       risk: 0,
     },
   };
-  expect(run(params)).toEqual({
-    monthInfo: {
-      year: 2020,
-      month: 1,
-      income: 0,
-      expense: 10,
+  expect(run(params)).toEqual([
+    {
+      monthInfo: {
+        year: 2020,
+        month: 1,
+        income: 0,
+        expense: 10,
+      },
+      asset: {
+        cash: -10,
+        risk: 0,
+      },
     },
-    asset: {
-      cash: -10,
-      risk: 0,
-    },
-  });
+  ]);
 });
 
 test('sell', () => {

@@ -22,108 +22,6 @@ const { Header, Content, Footer } = Layout;
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-const params: Params = {
-  startYear: 2020,
-  startMonth: 5,
-  endYear: 2030,
-  endMonth: 4,
-  eis: [
-    {
-      eiKind: 'income',
-      termKind: 'monthly',
-      term: {
-        startYear: 2020,
-        startMonth: 5,
-        endYear: 2030,
-        endMonth: 4,
-      },
-      amount: 40,
-      title: 'salary',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'monthly',
-      term: {
-        startYear: 2020,
-        startMonth: 5,
-        endYear: 2030,
-        endMonth: 4,
-      },
-      amount: 10,
-      title: 'monthly expense',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'yearly',
-      term: {
-        startYear: 2020,
-        endYear: 2030,
-        month: 5,
-      },
-      amount: 40,
-      title: 'hoken',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'yearly',
-      term: {
-        startYear: 2020,
-        endYear: 2030,
-        month: 12,
-      },
-      amount: 20,
-      title: 'tsumitate nisa 1',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'yearly',
-      term: {
-        startYear: 2020,
-        endYear: 2030,
-        month: 1,
-      },
-      amount: 20,
-      title: 'tsumitate nisa 2',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'extraordinary',
-      term: {
-        year: 2021,
-        month: 1,
-      },
-      amount: 100,
-      title: 'sinkon rokou',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'extraordinary',
-      term: {
-        year: 2021,
-        month: 4,
-      },
-      amount: 130,
-      title: 'kekkonsiki',
-    },
-    {
-      eiKind: 'expense',
-      termKind: 'extraordinary',
-      term: {
-        year: 2022,
-        month: 10,
-      },
-      amount: 500,
-      title: 'myhome',
-    },
-  ],
-  expectedReturn: 1.01,
-  expectedMaxDrawdown: 0.2,
-  initialAsset: {
-    cash: 50,
-    risk: 120,
-  },
-};
-
 const columns = [
   {
     title: '年月',
@@ -166,9 +64,9 @@ export default function Home() {
       termKind: 'monthly',
       term: {
         startYear: initStart.year(),
-        startMonth: initStart.month(),
+        startMonth: initStart.month() + 1,
         endYear: initEnd.year(),
-        endMonth: initEnd.month(),
+        endMonth: initEnd.month() + 1,
       },
       amount: 30,
       title: 'salary',
@@ -178,9 +76,9 @@ export default function Home() {
       termKind: 'monthly',
       term: {
         startYear: initStart.year(),
-        startMonth: initStart.month(),
+        startMonth: initStart.month() + 1,
         endYear: initEnd.year(),
-        endMonth: initEnd.month(),
+        endMonth: initEnd.month() + 1,
       },
       amount: 20,
       title: 'monthly expense',
@@ -196,22 +94,22 @@ export default function Home() {
       case 'monthly':
         eis[i].term = {
           startYear: range[0].year(),
-          startMonth: range[0].month(),
+          startMonth: range[0].month() + 1,
           endYear: range[1].year(),
-          endMonth: range[1].month(),
+          endMonth: range[1].month() + 1,
         };
         break;
       case 'yearly':
         eis[i].term = {
           startYear: range[0].year(),
           endYear: range[1].year(),
-          month: range[0].month(),
+          month: range[0].month() + 1,
         };
         break;
       case 'extraordinary':
         eis[i].term = {
           year: range[0].year(),
-          month: range[0].month(),
+          month: range[0].month() + 1,
         };
         break;
     }
@@ -240,9 +138,9 @@ export default function Home() {
       termKind: 'monthly',
       term: {
         startYear: range[0].year(),
-        startMonth: range[0].month(),
+        startMonth: range[0].month() + 1,
         endYear: range[1].year(),
-        endMonth: range[1].month(),
+        endMonth: range[1].month() + 1,
       },
       amount: 0,
       title: '',
@@ -255,9 +153,9 @@ export default function Home() {
   // params
   const params: Params = {
     startYear: range[0].year(),
-    startMonth: range[0].month(),
+    startMonth: range[0].month() + 1,
     endYear: range[1].year(),
-    endMonth: range[1].month(),
+    endMonth: range[1].month() + 1,
     expectedReturn: expectedReturn,
     expectedMaxDrawdown: expectedMaxDrawdown,
     eis: eis,
@@ -321,16 +219,20 @@ export default function Home() {
                       <>
                         <RangePicker
                           value={[
-                            moment().year(tm.startYear).month(tm.startMonth),
-                            moment().year(tm.endYear).month(tm.endMonth),
+                            moment()
+                              .year(tm.startYear)
+                              .month(tm.startMonth - 1),
+                            moment()
+                              .year(tm.endYear)
+                              .month(tm.endMonth - 1),
                           ]}
                           onChange={(r) =>
                             onTermChange(
                               {
                                 startYear: r[0].year(),
-                                startMonth: r[0].month(),
+                                startMonth: r[0].month() + 1,
                                 endYear: r[1].year(),
-                                endMonth: r[1].month(),
+                                endMonth: r[1].month() + 1,
                               },
                               i,
                             )
@@ -481,7 +383,11 @@ export default function Home() {
           {history === [] ? (
             <></>
           ) : (
-            <Table dataSource={dataSource} columns={columns} />
+            <Table
+              pagination={{ defaultPageSize: 12 * 5 }}
+              dataSource={dataSource}
+              columns={columns}
+            />
           )}
         </Content>
         <Footer>Footer</Footer>

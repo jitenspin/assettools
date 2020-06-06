@@ -63,8 +63,6 @@ export type MonthAsset = {
 
 export type MonthAssetHistory = MonthAsset[];
 
-export type BankruptcyInfo = MonthAsset;
-
 const toHistory = (params: Params): MonthInfoHistory => {
   let year = params.startYear;
   let month = params.startMonth;
@@ -195,12 +193,12 @@ const runWithSellRisk = (
   expectedMonthlyReturn: number,
   expectedMaxDrawdown: number,
   history: MonthInfoHistory,
-): MonthAssetHistory | BankruptcyInfo => {
+): MonthAssetHistory => {
   const assetHistory = [];
   const asset = { ...initialAsset };
-  let bankruptcyInfo = null;
+  let bankruptcy = false;
   history.forEach((info) => {
-    if (bankruptcyInfo !== null) {
+    if (bankruptcy) {
       return;
     }
     asset.risk *= expectedMonthlyReturn;
@@ -208,10 +206,11 @@ const runWithSellRisk = (
     if (asset.cash < 0) {
       // ドローダウン破産チェック
       if (asset.risk * expectedMaxDrawdown + asset.cash < 0) {
-        bankruptcyInfo = {
+        bankruptcy = true;
+        assetHistory.push({
           monthInfo: info,
           asset: { ...asset },
-        };
+        });
         return;
       }
       asset.risk += asset.cash;
@@ -223,13 +222,10 @@ const runWithSellRisk = (
       asset: { ...asset },
     });
   });
-  if (bankruptcyInfo !== null) {
-    return bankruptcyInfo;
-  }
   return assetHistory;
 };
 
-export const run = (params: Params): MonthAssetHistory | BankruptcyInfo => {
+export const run = (params: Params): MonthAssetHistory => {
   const history = toHistory(params);
   const allCashOk = checkAllCash(params.initialAsset, history);
   const expectedMonthlyReturn = params.expectedReturn ** (1 / 12);
