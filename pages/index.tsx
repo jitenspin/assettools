@@ -16,7 +16,7 @@ export default function Home() {
       <Layout>
         <Header>Header</Header>
         <Content style={{ margin: '14px' }}>
-          <Link href="/planner">
+          <Link href={`${process.env.BASE_URL}/planner`}>
             <a>投資計画計算</a>
           </Link>
         </Content>
